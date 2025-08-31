@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Auth System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .container {
+            max-width: 48rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div id="app" class="container bg-white p-8 rounded-xl shadow-lg w-full">
+        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">User Authentication System</h1>
+
+        <!-- Authentication Section -->
+        <div id="auth-section" class="flex flex-col md:flex-row gap-8">
+            <!-- Registration Form -->
+            <div class="flex-1 p-6 border border-gray-200 rounded-lg bg-white shadow-sm">
+                <h2 class="text-2xl font-semibold mb-4 text-center">Register</h2>
+                <form id="register-form" class="space-y-4">
+                    <div>
+                        <label for="reg-username" class="block text-sm font-medium text-gray-700">Username</label>
+                        <input type="text" id="reg-username" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="reg-password" class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="reg-password" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Register</button>
+                    <p id="reg-message" class="mt-2 text-center text-sm font-medium"></p>
+                </form>
+            </div>
+
+            <!-- Login Form -->
+            <div class="flex-1 p-6 border border-gray-200 rounded-lg bg-white shadow-sm">
+                <h2 class="text-2xl font-semibold mb-4 text-center">Login</h2>
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="login-username" class="block text-sm font-medium text-gray-700">Username</label>
+                        <input type="text" id="login-username" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="login-password" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Login</button>
+                    <p id="login-message" class="mt-2 text-center text-sm font-medium"></p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Protected Section -->
+        <div id="protected-section" class="hidden mt-8 p-6 bg-green-100 border border-green-300 rounded-lg shadow-sm text-center">
+            <h2 class="text-2xl font-semibold mb-4 text-green-800">Protected Route</h2>
+            <p id="welcome-message" class="text-lg text-green-700 mb-4">Welcome, User!</p>
+            <p id="protected-data" class="text-sm text-green-600 mb-4"></p>
+            <button id="logout-button" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '';
+
+        // UI elements
+        const authSection = document.getElementById('auth-section');
+        const protectedSection = document.getElementById('protected-section');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const protectedData = document.getElementById('protected-data');
+        const regForm = document.getElementById('register-form');
+        const loginForm = document.getElementById('login-form');
+        const regMessage = document.getElementById('reg-message');
+        const loginMessage = document.getElementById('login-message');
+        const logoutButton = document.getElementById('logout-button');
+
+        // Function to display messages in a box-like fashion instead of using alert()
+        function showMessageBox(message, type) {
+            const messageBox = document.createElement('div');
+            messageBox.className = `fixed bottom-4 right-4 p-4 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+            messageBox.textContent = message;
+            document.body.appendChild(messageBox);
+            setTimeout(() => {
+                messageBox.remove();
+            }, 3000);
+        }
+
+        // Helper function to check if a user is logged in
+        function isAuthenticated() {
+            return !!localStorage.getItem('token');
+        }
+
+        // Handle UI state based on authentication
+        function updateUI() {
+            if (isAuthenticated()) {
+                authSection.classList.add('hidden');
+                protectedSection.classList.remove('hidden');
+                fetchProtectedData();
+            } else {
+                authSection.classList.remove('hidden');
+                protectedSection.classList.add('hidden');
+            }
+        }
+
+        // Handle registration form submission
+        regForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('reg-username').value;
+            const password = document.getElementById('reg-password').value;
+
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    regMessage.textContent = data.message;
+                    regMessage.className = 'mt-2 text-center text-sm font-medium text-green-600';
+                    showMessageBox(data.message, 'success');
+                } else {
+                    regMessage.textContent = data.message || 'Registration failed.';
+                    regMessage.className = 'mt-2 text-center text-sm font-medium text-red-600';
+                    showMessageBox(data.message || 'Registration failed.', 'error');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                regMessage.textContent = 'Network error. Please try again.';
+                regMessage.className = 'mt-2 text-center text-sm font-medium text-red-600';
+                    showMessageBox('Network error. Please try again.', 'error');
+                }
+        });
+
+        // Handle login form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    loginMessage.textContent = data.message;
+                    loginMessage.className = 'mt-2 text-center text-sm font-medium text-green-600';
+                    showMessageBox('Login successful!', 'success');
+                    updateUI();
+                } else {
+                    loginMessage.textContent = data.message || 'Login failed.';
+                    loginMessage.className = 'mt-2 text-center text-sm font-medium text-red-600';
+                    showMessageBox(data.message || 'Login failed.', 'error');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                loginMessage.textContent = 'Network error. Please try again.';
+                loginMessage.className = 'mt-2 text-center text-sm font-medium text-red-600';
+                showMessageBox('Network error. Please try again.', 'error');
+            }
+        });
+
+        // Handle logout
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('token');
+            showMessageBox('Logged out successfully.', 'success');
+            updateUI();
+        });
+
+        // Fetch protected data
+        async function fetchProtectedData() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch(`${API_URL}/protected`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    welcomeMessage.textContent = data.message;
+                    protectedData.textContent = `User Role: ${data.user.role}`;
+                } else {
+                    // Token is invalid, remove it and update UI
+                    localStorage.removeItem('token');
+                    updateUI();
+                    showMessageBox('Session expired or invalid. Please log in again.', 'error');
+                }
+            } catch (error) {
+                console.error('Protected route error:', error);
+                showMessageBox('Could not access protected data.', 'error');
+            }
+        }
+
+        // Initial UI update
+        updateUI();
+
+    </script>
+</body>
+</html>
